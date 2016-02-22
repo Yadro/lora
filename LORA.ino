@@ -51,6 +51,16 @@ struct VectorInt3 {
     int32_t z;
 };
 
+struct NotiferType {
+    bool status;
+    bool led_on;
+    uint16_t duration_on;
+    uint16_t duration_off;
+    unsigned long time;
+};
+
+NotiferType notification = {false, false, 100, 3000, millis()};
+
 // MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
@@ -221,12 +231,12 @@ void loop() {
             setMeridian = false;
         } else {
             if (abs(v.z - meridian) > 2000) {
-                if (abs(millis() - delta) > 1000) {
-                    blink_on = true;
+                if (abs(millis() - delta) > 15000) {
+                    notification.status = true;
                 }
             } else {
                 delta = millis();
-                blink_on = false;
+                notification.status = false;
             }
         }
 
@@ -235,25 +245,25 @@ void loop() {
 }
 
 void blink() {
-    if (blink_on) {
-        if (led_on) {
-            if (millis() - blink_time > blink_delta) {
-                led_on = false;
+    if (notification.status) {
+        if (notification.led_on) {
+            if (millis() - notification.time > notification.duration_on) {
+                notification.led_on = false;
                 digitalWrite(LED_PIN, LOW);
                 analogWrite(SPEACKER_PIN, 0);
-                blink_time = millis();
+                notification.time = millis();
             }
         } else {
-            if (millis() - blink_time > blink_delta) {
-                led_on = true;
+            if (millis() - notification.time > notification.duration_off) {
+                notification.led_on = true;
                 digitalWrite(LED_PIN, HIGH);
                 analogWrite(SPEACKER_PIN, 10);
-                blink_time = millis();
+                notification.time = millis();
             }
         }
     } else {
-        if (led_on) {
-            led_on = false;
+        if (notification.led_on) {
+            notification.led_on = false;
             digitalWrite(LED_PIN, LOW);
             analogWrite(SPEACKER_PIN, 0);
         }
@@ -270,12 +280,16 @@ void applyQuaternion(VectorInt3 *v, int16_t *q) {
     int16_t qz = q[3];
     int16_t qw = q[0];
 
-    int32_t ix =  qw * x + qy * z - qz * y;
-    int32_t iy =  qw * y + qz * x - qx * z;
-    int32_t iz =  qw * z + qx * y - qy * x;
+    int32_t ix = qw * x + qy * z - qz * y;
+    int32_t iy = qw * y + qz * x - qx * z;
+    int32_t iz = qw * z + qx * y - qy * x;
     int32_t iw = -qx * x - qy * y - qz * z;
 
     v->x = (ix * qw + iw * -qx + iy * -qz - iz * -qy) / 16384;
     v->y = (iy * qw + iw * -qy + iz * -qx - ix * -qz) / 16384;
     v->z = (iz * qw + iw * -qz + ix * -qy - iy * -qx) / 16384;
+    // hello world
+
+
+    
 }
